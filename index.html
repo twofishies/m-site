@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Metronika</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+  html, body {
+    margin: 0;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    background-color: #F5F6F7;
+    font-family: 'Inter', sans-serif;
+    color: #1E1E1E;
+    overscroll-behavior: none;
+  }
+
+  canvas {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw !important;
+    height: 100vh !important;
+  }
+  #site-header {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    padding: 1rem 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    z-index: 11;
+    font-family: 'Inter', sans-serif;
+    font-size: 2.5rem;
+    background: transparent;
+    color: #1E1E1E;
+    pointer-events: none;
+}
+
+  #site-header .logo {
+    pointer-events: auto;
+}
+
+@media (max-width: 600px) {
+  #site-header {
+    font-size: 2.25rem;
+    padding: 0.5rem 1rem;
+  }
+}
+
+  #overlay, #content-panel {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    text-align: center;
+    pointer-events: none;
+    transition: opacity 0.5s ease;
+  }
+
+  #content-panel {
+    opacity: 0;
+    z-index: 5;
+    background-color: rgba(245, 246, 247, 0.85);
+    padding: 2rem;
+    pointer-events: auto;
+  }
+
+  #content-panel.visible {
+    opacity: 1;
+  }
+
+  #fallback {
+    display: none;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    max-width: 90%;
+    font-size: 1.125rem;
+    color: #2E3440;
+  }
+
+  #menu-btn {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 12;
+  background: none;
+  border: none;
+  font-size: 2rem;
+  cursor: pointer;
+  color: #1E1E1E;
+  pointer-events: auto;
+}
+
+  #side-menu {
+    position: fixed;
+    top: 0;
+    right: -100%;
+    width: 20%;
+    min-width: 200px;
+    max-width: 300px;
+    height: 100vh;
+    background-color: #2E3440;
+    color: white;
+    padding: 2rem 1rem;
+    box-shadow: -2px 0 5px rgba(0,0,0,0.2);
+    transition: right 0.3s ease;
+    z-index: 9;
+    overflow-y: auto;
+  }
+
+  #side-menu.visible {
+    right: 0 !important;
+  }
+
+  #side-menu ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  #side-menu li {
+    margin-bottom: 1rem;
+    cursor: pointer;
+    font-weight: 600;
+  }
+
+  #menu-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 8;
+  }
+
+  @media (max-width: 600px) {
+    #side-menu {
+      width: 80%;
+      right: -100%;
+    }
+
+    #side-menu.visible {
+      right: 0;
+    }
+
+    #menu-btn {
+      font-size: 1.5rem;
+      top: 0.5rem;
+      right: 0.5rem;
+    }
+
+    #overlay h2 {
+      font-size: 1.5rem;
+      margin: 0 1rem;
+    }
+
+    #overlay p {
+      font-size: 1rem;
+      margin: 0 1rem;
+    }
+
+    #content-panel {
+      padding: 1rem;
+      font-size: 0.95rem;
+    }
+  }
+</style>
+</head>
+<body>
+  <header id="site-header">
+  <div class="logo">Metronika</div>
+</header>
+  <canvas id="scene"></canvas>
+  <button id="menu-btn">☰</button>
+  <nav id="side-menu">
+    <ul>
+      <li onclick="loadContent('home')">Home</li>
+      <li onclick="loadContent('about')">About</li>
+      <li onclick="loadContent('services')">Services</li>
+      <li onclick="loadContent('contact')">Contact</li>
+    </ul>
+  </nav>
+  <div id="overlay">
+    <h2>Where Systems Meet Design</h2>
+    <p>Metronika helps organisations build human-centred, intelligently structured digital environments.</p>
+  </div>
+  <div id="content-panel"></div>
+  <div id="fallback">
+    <p>Your browser does not support WebGL. Please use a modern browser to experience this site.</p>
+  </div>
+  <div id="menu-overlay"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script>
+    if (!window.WebGLRenderingContext) {
+      document.getElementById('scene').style.display = 'none';
+      document.getElementById('overlay').style.display = 'none';
+      document.getElementById('fallback').style.display = 'block';
+    } else {
+      let scene = new THREE.Scene();
+      let camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+      let renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('scene'), alpha: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+
+      let geometry = new THREE.BoxGeometry();
+      let material = new THREE.MeshNormalMaterial({ wireframe: true });
+      let cube = new THREE.Mesh(geometry, material);
+      scene.add(cube);
+
+      camera.position.z = 3;
+
+      let velocity = { x: 0, y: 0 };
+      let targetRotation = { x: 0, y: 0 };
+      let currentRotation = { x: 0, y: 0 };
+      let lastTime = performance.now();
+      let inactivityTimeout;
+      let returningToCenter = false;
+
+      function resetInactivityTimer() {
+        clearTimeout(inactivityTimeout);
+        returningToCenter = false;
+        inactivityTimeout = setTimeout(() => {
+          returningToCenter = true;
+          velocity.x = 0;
+          velocity.y = 0;
+        }, 5000);
+      }
+
+      function animate() {
+        requestAnimationFrame(animate);
+        let now = performance.now();
+        let delta = (now - lastTime) / 16;
+        lastTime = now;
+
+        if (!returningToCenter) {
+          targetRotation.x += velocity.x;
+          targetRotation.y += velocity.y;
+          velocity.x *= 0.95;
+          velocity.y *= 0.95;
+        } else {
+          targetRotation.x += (0 - targetRotation.x) * 0.01;
+          targetRotation.y += (0 - targetRotation.y) * 0.01;
+        }
+
+        currentRotation.x += (targetRotation.x - currentRotation.x) * 0.1;
+        currentRotation.y += (targetRotation.y - currentRotation.y) * 0.1;
+
+        cube.rotation.x = currentRotation.x;
+        cube.rotation.y = currentRotation.y;
+
+        // Easter egg: color shift when rotating fast
+        const speed = Math.sqrt(velocity.x * velocity.x + velocity.y * velocity.y);
+        if (speed > 0.3) {
+          cube.material.color.setHSL(Math.random(), 0.7, 0.5);
+        }
+
+        renderer.render(scene, camera);
+      }
+      animate();
+
+      let isDragging = false;
+      let lastX = 0, lastY = 0;
+
+      function updateVelocity(dx, dy) {
+        velocity.y = dx * 0.01;
+        velocity.x = dy * 0.01;
+        resetInactivityTimer();
+      }
+
+      document.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        lastX = e.clientX;
+        lastY = e.clientY;
+        resetInactivityTimer();
+      });
+
+      document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        const dx = e.clientX - lastX;
+        const dy = e.clientY - lastY;
+        updateVelocity(dx, dy);
+        lastX = e.clientX;
+        lastY = e.clientY;
+      });
+
+      document.addEventListener('mouseup', () => {
+        isDragging = false;
+      });
+
+      document.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 1) {
+          lastX = e.touches[0].clientX;
+          lastY = e.touches[0].clientY;
+          resetInactivityTimer();
+        }
+      }, { passive: true });
+
+      document.addEventListener('touchmove', (e) => {
+        if (e.touches.length === 1) {
+          const dx = e.touches[0].clientX - lastX;
+          const dy = e.touches[0].clientY - lastY;
+          updateVelocity(dx, dy);
+          lastX = e.touches[0].clientX;
+          lastY = e.touches[0].clientY;
+        }
+      }, { passive: true });
+
+      window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
+
+      resetInactivityTimer();
+    }
+
+    document.getElementById('menu-btn').addEventListener('click', () => {
+      const menu = document.getElementById('side-menu');
+      const overlay = document.getElementById('menu-overlay');
+      menu.classList.toggle('visible');
+      overlay.style.display = menu.classList.contains('visible') ? 'block' : 'none';
+    });
+
+    document.getElementById('menu-overlay').addEventListener('click', () => {
+      document.getElementById('side-menu').classList.remove('visible');
+      document.getElementById('menu-overlay').style.display = 'none';
+    });
+
+    document.addEventListener('click', (e) => {
+      const menu = document.getElementById('side-menu');
+      const btn = document.getElementById('menu-btn');
+      const overlay = document.getElementById('menu-overlay');
+      if (menu.classList.contains('visible') && !menu.contains(e.target) && !btn.contains(e.target)) {
+        menu.classList.remove('visible');
+        overlay.style.display = 'none';
+      }
+    });
+
+    function loadContent(section) {
+      const panel = document.getElementById('content-panel');
+      const overlay = document.getElementById('menu-overlay');
+      const overlayText = document.getElementById('overlay');
+
+      if (section === 'home') {
+        panel.classList.remove('visible');
+        panel.innerHTML = '';
+        overlayText.style.display = 'flex';
+      } else {
+        overlayText.style.display = 'none';
+        const content = {
+          about: '<h2>About</h2><p>We craft structured, human-centric technology experiences.</p>',
+          services: '<h2>Services</h2><p>Consulting, digital strategy, systems design, and innovation pathways.</p>',
+          contact: '<h2>Contact</h2><p>Email us at <a href="mailto:hello@metronika.co.uk">hello@metronika.co.uk</a></p>'
+        };
+        panel.innerHTML = content[section] || '';
+        panel.classList.add('visible');
+      }
+
+      setTimeout(() => {
+        document.getElementById('side-menu').classList.remove('visible');
+        overlay.style.display = 'none';
+      }, 300);
+    }
+  </script>
+<script>
+  // Rainbow background easter egg: press M + E + T
+  const keySequence = ['m', 'e', 't'];
+  let keyBuffer = [];
+  let rainbowActive = false;
+  let hue = 0;
+  let rainbowInterval;
+
+  function startRainbowBackground() {
+    if (rainbowActive) return;
+    rainbowActive = true;
+    rainbowInterval = setInterval(() => {
+      document.body.style.backgroundColor = `hsl(${hue}, 70%, 85%)`;
+      hue = (hue + 1) % 360;
+    }, 20);
+  }
+
+  document.addEventListener('keydown', (e) => {
+    keyBuffer.push(e.key.toLowerCase());
+    if (keyBuffer.length > keySequence.length) keyBuffer.shift();
+    if (keyBuffer.join('') === keySequence.join('')) {
+      startRainbowBackground();
+    }
+  });
+</script>
+</body>
+</html>
